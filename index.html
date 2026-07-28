@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coral Code — a two-person software studio in Miami</title>
+<meta name="description" content="Coral Code is a two-person software studio in Miami. We build the software we wished existed, starting with Lumis, a student planner that reads your syllabus and learns your courses.">
+<meta property="og:title" content="Coral Code">
+<meta property="og:description" content="A two-person software studio in Miami. Our first product is Lumis.">
+<meta property="og:url" content="https://coralcode.co">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#02101A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 29c0-6 5-8 5-13a5 5 0 00-10 0c0 5 5 7 5 13z' fill='%23FF6F5E'/%3E%3Cpath d='M16 16c-3.4 0-5-2.6-5-5.5S12.6 3 16 3s5 4.6 5 7.5S19.4 16 16 16z' fill='none' stroke='%235CDDC8' stroke-width='1.8'/%3E%3Ccircle cx='16' cy='10' r='2.2' fill='%235CDDC8'/%3E%3C/svg%3E">
+<style>
+:root{
+  /* the reef: a sibling world to Lumis's night sky — same vastness, different depth */
+  --abyss:#02101A; --deep:#06202C; --deep-2:#0A2E3C;
+  --panel:rgba(8,34,45,.68); --panel-solid:#082430; --panel-lit:rgba(12,48,62,.6);
+  --line:rgba(120,214,206,.18); --line-strong:rgba(120,214,206,.4);
+  --text:#DEEFF0; --bright:#F4FCFC; --muted:#A5C4CA; --faint:#7D9BA3;
+  --coral:#FF6F5E; --coral-lit:#FF9884; --coral-deep:#D8462F;
+  --aqua:#5CDDC8; --aqua-deep:#249C97;
+  --lumis:#B49CFF; --lumis-deep:#8B6BFF;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --disp:"Helvetica Neue",Helvetica,Arial,"Liberation Sans",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+:root[data-theme="light"],:root[data-theme="dark"]{color-scheme:dark}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;background:var(--abyss)}
+body{font-family:var(--sans);color:var(--text);line-height:1.62;-webkit-font-smoothing:antialiased;
+  overflow-x:hidden;background:var(--abyss)}
+
+/* ============ the water: continuous ground ============ */
+#reef{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+#caustics{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(70% 38% at 22% -8%,rgba(92,221,200,.18),transparent 60%),
+    radial-gradient(55% 34% at 88% 6%,rgba(255,111,94,.16),transparent 62%),
+    radial-gradient(80% 50% at 50% 106%,rgba(36,156,151,.16),transparent 64%)}
+.page{position:relative;z-index:1}
+
+.wrap{max-width:1120px;margin:0 auto;padding:0 26px}
+a{color:var(--coral-lit)}
+a:focus-visible,button:focus-visible{outline:2.5px solid var(--aqua);outline-offset:3px;border-radius:6px}
+::selection{background:rgba(255,111,94,.4);color:#FFF}
+
+.label{font-family:var(--mono);font-size:.71rem;letter-spacing:.22em;text-transform:uppercase;color:var(--coral-lit);font-weight:600}
+.label.aq{color:var(--aqua)}
+h1{font-family:var(--disp);font-size:clamp(2.5rem,6.6vw,4.6rem);line-height:1.02;letter-spacing:-.038em;
+  font-weight:700;color:var(--bright);text-wrap:balance;margin:1rem 0 1.3rem}
+h2{font-family:var(--disp);font-size:clamp(1.7rem,3.5vw,2.5rem);line-height:1.1;letter-spacing:-.032em;
+  font-weight:700;color:var(--bright);text-wrap:balance;margin-bottom:.7rem}
+h3{font-family:var(--disp);font-weight:700;letter-spacing:-.02em;color:var(--bright)}
+.sub{color:var(--muted);max-width:44em;font-size:1.05rem}
+section{padding:104px 0;position:relative}
+@media(max-width:700px){section{padding:74px 0}}
+.rule{height:1px;background:linear-gradient(90deg,transparent,var(--line-strong),transparent);max-width:1120px;margin:0 auto}
+
+/* ============ motion ============ */
+.rv{opacity:0;transform:translateY(22px);transition:opacity .75s cubic-bezier(.2,.65,.25,1),transform .75s cubic-bezier(.2,.65,.25,1)}
+.rv.in{opacity:1;transform:none}
+.d1{transition-delay:.07s}.d2{transition-delay:.14s}.d3{transition-delay:.21s}.d4{transition-delay:.28s}
+@media (prefers-reduced-motion:reduce){
+  .rv{opacity:1;transform:none;transition:none}
+  *,*::before,*::after{animation-duration:.001s !important;animation-iteration-count:1 !important;transition-duration:.001s !important}
+  html{scroll-behavior:auto}
+}
+@keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+
+/* ============ nav ============ */
+header.site{position:fixed;inset:0 0 auto 0;z-index:60;border-bottom:1px solid transparent;transition:background .35s,border-color .35s}
+header.site.scrolled{background:rgba(2,16,26,.84);backdrop-filter:blur(14px) saturate(140%);border-color:var(--line)}
+.nav{display:flex;align-items:center;gap:28px;height:70px}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--bright);
+  font-family:var(--disp);font-weight:700;font-size:1.16rem;letter-spacing:-.02em}
+.brand svg{flex:none;filter:drop-shadow(0 0 8px rgba(255,111,94,.55))}
+.nav nav{display:flex;gap:26px;margin-left:auto}
+.nav nav a{color:var(--muted);text-decoration:none;font-size:.91rem;font-weight:500;transition:color .22s}
+.nav nav a:hover{color:var(--bright)}
+@media(max-width:820px){.nav nav{display:none}}
+.btn{display:inline-flex;align-items:center;gap:9px;background:linear-gradient(118deg,var(--coral-deep),var(--coral));
+  color:#FFF;font-weight:650;text-decoration:none;padding:.74rem 1.4rem;border-radius:999px;border:none;font-size:.94rem;
+  cursor:pointer;transition:transform .2s,box-shadow .25s;box-shadow:0 4px 22px rgba(255,111,94,.34)}
+.btn:hover{transform:translateY(-2px);box-shadow:0 9px 32px rgba(255,111,94,.5);color:#FFF}
+.btn.ghost{background:transparent;color:var(--bright);box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.btn.ghost:hover{box-shadow:inset 0 0 0 1.5px var(--aqua);background:rgba(92,221,200,.1)}
+.btn.lumis{background:linear-gradient(118deg,var(--lumis-deep),var(--lumis));box-shadow:0 4px 22px rgba(139,107,255,.4)}
+.btn.lumis:hover{box-shadow:0 9px 32px rgba(139,107,255,.58)}
+
+/* ============ hero ============ */
+.hero{min-height:92svh;display:flex;align-items:center;padding:132px 0 80px}
+.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center}
+@media(max-width:920px){.hero-grid{grid-template-columns:1fr;gap:44px}.hero{min-height:0}}
+h1 em{font-style:normal;color:var(--coral)}
+.hero .lede{font-size:1.17rem;color:var(--text);max-width:34em;margin-bottom:2.1rem;opacity:0;animation:up .8s ease .3s forwards}
+.hero-cta{display:flex;gap:13px;flex-wrap:wrap;opacity:0;animation:up .8s ease .44s forwards}
+.hero h1{opacity:0;animation:up .9s ease .12s forwards}
+.hero .label{opacity:0;animation:up .8s ease .04s forwards}
+.facts{display:flex;gap:0;flex-direction:column;border-left:1px solid var(--line-strong);padding-left:24px;
+  opacity:0;animation:up .9s ease .56s forwards}
+.fact{padding:15px 0;border-bottom:1px solid var(--line)}
+.fact:last-child{border-bottom:none}
+.fact dt{font-family:var(--mono);font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);margin-bottom:4px}
+.fact dd{font-family:var(--disp);font-size:1.06rem;font-weight:700;letter-spacing:-.02em;color:var(--bright)}
+.fact dd span{display:block;font-family:var(--sans);font-weight:400;font-size:.88rem;color:var(--muted);letter-spacing:0;margin-top:2px}
+
+/* ============ mission ============ */
+.mission{position:relative}
+.mission-quote{font-family:var(--disp);font-weight:700;letter-spacing:-.032em;line-height:1.14;
+  font-size:clamp(1.65rem,3.9vw,2.85rem);color:var(--bright);max-width:26em;text-wrap:balance;margin:1.4rem 0 0}
+.mission-quote em{font-style:normal;color:var(--coral)}
+.mission-note{margin-top:1.6rem;color:var(--muted);max-width:52ch;font-size:1.03rem}
+.principles{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:3.4rem}
+@media(max-width:940px){.principles{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.principles{grid-template-columns:1fr}}
+.principle{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px 22px;
+  backdrop-filter:blur(10px);transition:transform .25s,border-color .25s}
+.principle:hover{transform:translateY(-4px);border-color:var(--line-strong)}
+.principle .k{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--aqua);margin-bottom:11px}
+.principle h3{font-size:1.04rem;margin-bottom:.4rem}
+.principle p{font-size:.92rem;color:var(--muted)}
+
+/* ============ who we are ============ */
+.who{display:grid;grid-template-columns:.9fr 1.1fr;gap:52px;align-items:start;margin-top:2.4rem}
+@media(max-width:880px){.who{grid-template-columns:1fr;gap:34px}}
+.who .copy p{color:var(--muted);font-size:1.03rem;margin-bottom:1rem;max-width:58ch}
+.who .copy strong{color:var(--bright);font-weight:600}
+.people{display:flex;flex-direction:column;gap:16px}
+.person{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:24px;
+  backdrop-filter:blur(10px);display:flex;gap:18px;align-items:flex-start;transition:transform .22s,border-color .22s}
+.person:hover{transform:translateX(6px);border-color:var(--line-strong)}
+.person .mono-av{width:56px;height:56px;flex:none;border-radius:16px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-weight:700;font-size:1.1rem;color:#FFF;letter-spacing:.02em}
+.person.h .mono-av{background:linear-gradient(150deg,var(--coral),var(--coral-deep));box-shadow:0 0 22px rgba(255,111,94,.38)}
+.person.j .mono-av{background:linear-gradient(150deg,var(--aqua),var(--aqua-deep));box-shadow:0 0 22px rgba(92,221,200,.34)}
+.person h3{font-size:1.08rem}
+.person .role{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:3px 0 .6rem}
+.person p{font-size:.93rem;color:var(--muted)}
+.person ul{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin-top:.85rem}
+.person li{font-family:var(--mono);font-size:.67rem;color:var(--text);background:rgba(255,255,255,.06);
+  border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+
+/* ============ products ============ */
+.product{position:relative;border-radius:26px;padding:0;overflow:hidden;margin-top:2.8rem;
+  border:1px solid rgba(180,156,255,.34);background:
+    radial-gradient(80% 100% at 88% 0%,rgba(139,107,255,.22),transparent 60%),
+    linear-gradient(160deg,rgba(19,14,48,.9),rgba(8,34,45,.82));
+  backdrop-filter:blur(10px);box-shadow:0 24px 60px rgba(1,8,14,.6)}
+.product-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:0}
+@media(max-width:900px){.product-grid{grid-template-columns:1fr}}
+.product-copy{padding:40px 40px 42px}
+@media(max-width:600px){.product-copy{padding:30px 24px 32px}}
+.prod-head{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.prod-mark{display:flex;align-items:center;gap:9px;font-family:"Iowan Old Style",Palatino,Georgia,serif;
+  font-size:1.5rem;font-weight:600;color:#FFF;letter-spacing:.01em}
+.prod-mark svg{filter:drop-shadow(0 0 8px rgba(180,156,255,.8))}
+.status{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;
+  color:var(--lumis);background:rgba(139,107,255,.16);border:1px solid rgba(180,156,255,.36);border-radius:999px;padding:4px 11px}
+.product h3{font-size:1.4rem;margin-bottom:.55rem;letter-spacing:-.028em}
+.product p{color:var(--muted);font-size:1rem;max-width:50ch}
+.product p strong{color:var(--text);font-weight:600}
+.prod-feats{list-style:none;display:flex;flex-wrap:wrap;gap:7px;margin:1.5rem 0 1.9rem}
+.prod-feats li{font-size:.82rem;color:#EFEAFF;background:rgba(139,107,255,.15);
+  border:1px solid rgba(180,156,255,.3);border-radius:999px;padding:5px 12px}
+.by{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-top:1.5rem}
+.by b{color:var(--coral-lit)}
+/* product visual: the Lumis sky, quoted inside the reef */
+.product-vis{position:relative;min-height:330px;overflow:hidden;
+  background:linear-gradient(170deg,#221845,#100B2C 78%);border-left:1px solid rgba(180,156,255,.22)}
+@media(max-width:900px){.product-vis{min-height:260px;border-left:none;border-top:1px solid rgba(180,156,255,.22)}}
+.product-vis canvas{position:absolute;inset:0;width:100%;height:100%}
+.mini{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:186px;
+  background:#0D0924;border-radius:30px;padding:8px;
+  box-shadow:0 26px 60px rgba(2,1,14,.7),0 0 0 1.2px rgba(180,156,255,.34),0 0 46px rgba(139,107,255,.3)}
+.mini .scr{background:linear-gradient(178deg,#1A1146,#100B2C 65%);border-radius:23px;padding:12px 11px;display:flex;flex-direction:column;gap:8px}
+.mini .m-top{display:flex;justify-content:space-between;align-items:center}
+.mini .m-logo{font-family:"Iowan Old Style",Palatino,Georgia,serif;font-size:.78rem;color:#FFF}
+.mini .m-date{font-family:var(--mono);font-size:.5rem;letter-spacing:.1em;text-transform:uppercase;color:#8E85BC}
+.mini .m-pill{font-size:.53rem;color:#D8CCFF;background:rgba(139,107,255,.2);border:1px solid rgba(180,156,255,.34);
+  border-radius:8px;padding:5px 7px;display:flex;align-items:center;gap:6px}
+.mini .m-pill i{width:5px;height:5px;border-radius:50%;background:var(--lumis);box-shadow:0 0 7px var(--lumis);flex:none}
+.mini .row{background:rgba(255,255,255,.06);border:1px solid rgba(180,156,255,.16);border-left:2.5px solid var(--lumis);
+  border-radius:8px;padding:6px 7px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.mini .row.g{border-left-color:#5FD8AE}.mini .row.a{border-left-color:#F5B45C}
+.mini .row b{font-size:.55rem;font-weight:600;color:#EFEAFF;display:block}
+.mini .row small{font-family:var(--mono);font-size:.46rem;color:#8E85BC;display:block;letter-spacing:.03em}
+.mini .row span{font-family:var(--mono);font-size:.46rem;color:#D8CCFF;background:rgba(139,107,255,.22);
+  border-radius:999px;padding:2px 6px;flex:none}
+
+/* next up */
+.next{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+@media(max-width:760px){.next{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px 26px;backdrop-filter:blur(10px)}
+.card .status.q{color:var(--aqua);background:rgba(92,221,200,.14);border-color:var(--line-strong)}
+.card h3{font-size:1.14rem;margin:14px 0 .5rem}
+.card p{color:var(--muted);font-size:.95rem;max-width:46ch}
+.card .btn{margin-top:1.4rem}
+
+/* ============ contact ============ */
+.contact{padding:112px 0 120px;text-align:center;position:relative}
+.contact::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(60% 60% at 50% 116%,rgba(255,111,94,.24),transparent 66%)}
+.contact .wrap{position:relative}
+.contact .sub{margin-inline:auto}
+.contact-actions{display:flex;gap:13px;justify-content:center;flex-wrap:wrap;margin-top:2rem}
+.contact-note{margin-top:1.4rem;font-size:.88rem;color:var(--faint)}
+
+footer.site{border-top:1px solid var(--line);padding:32px 0;font-size:.86rem;color:var(--faint);background:rgba(1,10,17,.6)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center}
+footer nav{display:flex;gap:20px;flex-wrap:wrap}
+footer a{color:var(--muted);text-decoration:none}
+footer a:hover{color:var(--coral-lit)}
+</style>
+</head>
+<body>
+
+
+<canvas id="reef" aria-hidden="true"></canvas>
+<div id="caustics" aria-hidden="true"></div>
+
+<div class="page">
+<header class="site" id="siteHeader">
+  <div class="wrap nav">
+    <a class="brand" href="#top" aria-label="Coral Code home">
+      <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M16 29c0-6 5-8 5-13a5 5 0 00-10 0c0 5 5 7 5 13z" fill="#FF6F5E" opacity=".9"/>
+        <path d="M16 16c-3.4 0-5-2.6-5-5.5S12.6 3 16 3s5 4.6 5 7.5S19.4 16 16 16z" fill="none" stroke="#5CDDC8" stroke-width="1.8"/>
+        <circle cx="16" cy="10" r="2.2" fill="#5CDDC8"/>
+      </svg>
+      Coral Code
+    </a>
+    <nav aria-label="Site">
+      <a href="#mission">Mission</a>
+      <a href="#who">Who we are</a>
+      <a href="#products">Products</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <a class="btn" href="#products">See Lumis</a>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="label">Software studio · Miami, Florida · Est. 2026</p>
+      <h1>We build the software we <em>wished existed.</em></h1>
+      <p class="lede">Coral Code is a two-person studio. We pick problems we live with ourselves, build the app we wanted, and ship it to the people standing in the same spot. Our first is <strong>Lumis</strong> — a planner that reads your syllabus and learns your courses.</p>
+      <div class="hero-cta">
+        <a class="btn" href="#products">Meet Lumis</a>
+        <a class="btn ghost" href="#mission">What we're about</a>
+      </div>
+    </div>
+    <dl class="facts">
+      <div class="fact"><dt>Studio</dt><dd>Two founders<span>Hudson &amp; Jesse — no investors, no committee</span></dd></div>
+      <div class="fact"><dt>Based in</dt><dd>Miami, Florida<span>Built between classes at the University of Miami</span></dd></div>
+      <div class="fact"><dt>Shipping now</dt><dd>Lumis for iPhone<span>TestFlight beta August 2026</span></dd></div>
+      <div class="fact"><dt>Next</dt><dd>In the sketchbook<span>Same rule: something we need ourselves</span></dd></div>
+    </dl>
+  </div>
+</section>
+
+<div class="rule" aria-hidden="true"></div>
+
+<!-- MISSION -->
+<section class="mission" id="mission">
+  <div class="wrap">
+    <p class="label rv">Our mission</p>
+    <p class="mission-quote rv d1">Take the parts of life that are <em>harder than they need to be</em> and turn them into software that quietly handles it.</p>
+    <p class="mission-note rv d2">Not platforms. Not dashboards for their own sake. Apps small enough that one person can understand the whole thing, made for a problem we've personally had — and finished, not perpetually in beta. Every product we make has to earn its place on a home screen we use every day.</p>
+
+    <div class="principles">
+      <div class="principle rv d1">
+        <p class="k">How we choose</p>
+        <h3>We only build what we use</h3>
+        <p>Every product starts as a problem one of us actually had. If we'd stop using it after a month, we don't start.</p>
+      </div>
+      <div class="principle rv d2">
+        <p class="k">How we're built</p>
+        <h3>Small on purpose</h3>
+        <p>Two people, self-funded, no outside money. It means fewer things at once — and every one of them done properly.</p>
+      </div>
+      <div class="principle rv d3">
+        <p class="k">How we treat you</p>
+        <h3>Your data isn't the product</h3>
+        <p>You pay for the app, so the app works for you. We don't sell your data, and anything you upload stays yours to delete.</p>
+      </div>
+      <div class="principle rv d4">
+        <p class="k">How we ship</p>
+        <h3>Real deadlines</h3>
+        <p>Lumis ships for a semester that starts whether we're ready or not. Deadlines we can't move keep us honest.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="rule" aria-hidden="true"></div>
+
+<!-- WHO WE ARE -->
+<section id="who">
+  <div class="wrap">
+    <p class="label aq rv">Who we are</p>
+    <h2 class="rv d1">Two friends, one shared frustration, a lot of late nights</h2>
+    <div class="who">
+      <div class="copy">
+        <p class="rv d1">Coral Code is <strong>Hudson and Jesse</strong> — students at the University of Miami who got tired of complaining about the same software and decided to build a replacement instead.</p>
+        <p class="rv d2">We work the way two people can: one of us lives in the product and the plan, the other lives in the code. No handoff meetings, no roadmap by committee — a conversation and a commit.</p>
+        <p class="rv d3">The name comes from where we are. Coral reefs are built by small organisms doing small, patient work, and the result outlasts anything a single one of them could make. That's the studio we want: <strong>build carefully, keep adding, let it compound.</strong></p>
+      </div>
+      <div class="people">
+        <div class="person h rv d2">
+          <div class="mono-av">H</div>
+          <div>
+            <h3>Hudson Hagmann</h3>
+            <p class="role">Co-founder · product &amp; operations</p>
+            <p>Finance student, golfer, and the organized one — the friend whose calendar people borrow before exams. Hudson decides what gets built and makes sure it works the way real students behave, not the way a spec says they do.</p>
+            <ul><li>product</li><li>design direction</li><li>go-to-market</li><li>the schedule</li></ul>
+          </div>
+        </div>
+        <div class="person j rv d3">
+          <div class="mono-av">J</div>
+          <div>
+            <h3>Jesse</h3>
+            <p class="role">Co-founder · engineering</p>
+            <p>The engineer of the duo — happiest deep in the code. Jesse built the engine that turns a messy syllabus PDF and a folder of lecture notes into a semester the app actually understands. If it feels like magic, that's his side of the shop.</p>
+            <ul><li>iOS</li><li>backend</li><li>AI pipeline</li><li>infrastructure</li></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="rule" aria-hidden="true"></div>
+
+<!-- PRODUCTS -->
+<section id="products">
+  <div class="wrap">
+    <p class="label rv">What we've built</p>
+    <h2 class="rv d1">Product 01</h2>
+    <p class="sub rv d2">Each Coral Code product keeps its own identity — its own name, its own look, its own world. What they share is who made them.</p>
+
+    <article class="product rv d2">
+      <div class="product-grid">
+        <div class="product-copy">
+          <div class="prod-head">
+            <span class="prod-mark">
+              <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="7" fill="#B49CFF"/><g stroke="#B49CFF" stroke-width="2.6" stroke-linecap="round"><path d="M16 2v5M16 25v5M2 16h5M25 16h5M6 6l3.5 3.5M22.5 22.5L26 26M26 6l-3.5 3.5M9.5 22.5L6 26"/></g></svg>
+              Lumis
+            </span>
+            <span class="status">In development · iPhone</span>
+          </div>
+          <h3>Your whole semester, illuminated</h3>
+          <p>Upload your syllabus and Lumis builds the entire semester — every deadline, quiz and exam on one calendar, weighted by what each one is worth. Then you feed it your lecture notes, slides and readings, and it <strong>researches the course itself</strong> to fill the gaps. What comes back is flashcards, practice quizzes, study plans and a tutor that knows <strong>your</strong> class, not a generic one.</p>
+          <ul class="prod-feats">
+            <li>Syllabus scanner</li>
+            <li>Course material uploads</li>
+            <li>Automatic course research</li>
+            <li>AI flashcards &amp; quizzes</li>
+            <li>Semester calendar</li>
+            <li>GPA predictions</li>
+            <li>Focus timer</li>
+          </ul>
+          <a class="btn lumis" href="https://lumisapp.org">Visit lumisapp.org
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h13M12 5l7 7-7 7"/></svg>
+          </a>
+          <p class="by">A <b>Coral Code</b> product · TestFlight beta August 2026</p>
+        </div>
+
+        <div class="product-vis">
+          <canvas id="prodStars" aria-hidden="true"></canvas>
+          <div class="mini" role="img" aria-label="The Lumis app showing a course learned notice and three upcoming assignments with grade weights">
+            <div class="scr">
+              <div class="m-top"><span class="m-logo">Lumis</span><span class="m-date">Mon · Sep 14</span></div>
+              <div class="m-pill"><i></i>BIO 201 · syllabus + notes learned</div>
+              <div class="row"><span style="flex:1"><b>Problem Set 2</b><small>BIO 201 · Tue</small></span><span>20%</span></div>
+              <div class="row g"><span style="flex:1"><b>Reading quiz</b><small>HIST 140 · Thu</small></span><span>5%</span></div>
+              <div class="row a"><span style="flex:1"><b>Midterm 1</b><small>BIO 201 · Sep 24</small></span><span>25%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <div class="next">
+      <div class="card rv d1">
+        <span class="status q">Product 02 · not announced</span>
+        <h3>Whatever annoys us next</h3>
+        <p>There's a shortlist. It follows the same rule as Lumis: something we already need, small enough to finish, and better than whatever we're putting up with today. When it's real, it'll show up here first.</p>
+        <a class="btn ghost" href="#contact">Hear about it first</a>
+      </div>
+      <div class="card rv d2">
+        <span class="status q">Working with us</span>
+        <h3>Ideas, feedback, and beta testers</h3>
+        <p>If you're a student who wants to break Lumis before launch, a professor curious how it handles your syllabus, or someone with a problem you think we'd care about — we read every email.</p>
+        <a class="btn ghost" href="mailto:hello@coralcode.co?subject=Coral%20Code">Send us a note</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="contact" id="contact">
+  <div class="wrap">
+    <p class="label rv">Say hello</p>
+    <h2 class="rv d1">Small studio. Real inbox.</h2>
+    <p class="sub rv d2">Questions about Lumis, beta access, or an idea worth building — write to us and you'll get one of the two of us, not a support queue.</p>
+    <div class="contact-actions rv d3">
+      <a class="btn" href="mailto:hello@coralcode.co?subject=Coral%20Code">hello@coralcode.co</a>
+      <a class="btn ghost" href="https://lumisapp.org">See Lumis</a>
+    </div>
+    <p class="contact-note rv d4">Coral Code · Miami, Florida</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <span>© 2026 Coral Code · Miami, FL</span>
+    <nav aria-label="Elsewhere">
+      <a href="https://lumisapp.org">Lumis</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="mailto:hello@coralcode.co">Email us</a>
+    </nav>
+  </div>
+</footer>
+</div>
+
+<script>
+(function(){
+  var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var header = document.getElementById('siteHeader');
+  function onScroll(){ header.classList.toggle('scrolled', scrollY > 40); }
+  addEventListener('scroll', onScroll, {passive:true}); onScroll();
+
+  var els = document.querySelectorAll('.rv');
+  if(reduced || !('IntersectionObserver' in window)){
+    els.forEach(function(el){ el.classList.add('in'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, {threshold:.14, rootMargin:'0px 0px -40px 0px'});
+    els.forEach(function(el){ io.observe(el); });
+  }
+
+  /* the reef: drifting bioluminescent motes + slow light shafts, behind the whole page */
+  (function reef(){
+    var canvas = document.getElementById('reef');
+    if(!canvas) return;
+    var ctx = canvas.getContext('2d'), w = 0, h = 0, dpr = Math.min(devicePixelRatio||1,2);
+    function size(){
+      w = innerWidth; h = innerHeight;
+      canvas.width = w*dpr; canvas.height = h*dpr;
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    size(); addEventListener('resize', size);
+
+    var COUNT = Math.round(Math.min(120, Math.max(60, innerWidth/13))), M = [];
+    var HUES = ['92,221,200','255,111,94','160,235,225'];
+    for(var i=0;i<COUNT;i++){
+      M.push({x:Math.random(), y:Math.random(), r:.7+Math.random()*1.7,
+        ph:Math.random()*Math.PI*2, sp:.25+Math.random()*.7,
+        vx:(Math.random()-.5)*.00016, vy:-(.00004+Math.random()*.00012),
+        depth:.2+Math.random()*.8, hue:HUES[i%3], glow:Math.random()<.3});
+    }
+    if(reduced){
+      M.forEach(function(p){
+        ctx.fillStyle = 'rgba('+p.hue+',.5)';
+        ctx.beginPath(); ctx.arc(p.x*w, p.y*h, p.r*.85, 0, 7); ctx.fill();
+      });
+      return;
+    }
+    var t = 0;
+    (function frame(){
+      requestAnimationFrame(frame);
+      t += .016;
+      ctx.clearRect(0,0,w,h);
+
+      /* two slow light shafts from the surface */
+      for(var s=0;s<2;s++){
+        var cx = (s ? .74 : .26) * w + Math.sin(t*.11 + s*2.2) * w*.045;
+        var g = ctx.createLinearGradient(cx, 0, cx + w*.12, h*.85);
+        g.addColorStop(0,'rgba(120,224,214,'+(s?.055:.075)+')');
+        g.addColorStop(1,'rgba(120,224,214,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(cx - w*.05, 0); ctx.lineTo(cx + w*.05, 0);
+        ctx.lineTo(cx + w*.19, h*.9); ctx.lineTo(cx + w*.02, h*.9);
+        ctx.closePath(); ctx.fill();
+      }
+
+      var sc = scrollY;
+      for(var i=0;i<M.length;i++){
+        var p = M[i];
+        p.x += p.vx; p.y += p.vy;
+        if(p.y < -.02) p.y = 1.02;
+        if(p.x < -.02) p.x = 1.02; if(p.x > 1.02) p.x = -.02;
+        var Y = (p.y*h - sc*p.depth*.24) % h; if(Y < 0) Y += h;
+        var X = p.x*w;
+        var a = .18 + .55*(0.5 + 0.5*Math.sin(t*p.sp + p.ph));
+        if(p.glow){
+          var rg = ctx.createRadialGradient(X,Y,0,X,Y,p.r*7);
+          rg.addColorStop(0,'rgba('+p.hue+','+(a*.42)+')');
+          rg.addColorStop(1,'rgba('+p.hue+',0)');
+          ctx.fillStyle = rg;
+          ctx.beginPath(); ctx.arc(X,Y,p.r*7,0,7); ctx.fill();
+        }
+        ctx.fillStyle = 'rgba('+p.hue+','+a+')';
+        ctx.beginPath(); ctx.arc(X,Y,p.r*.85,0,7); ctx.fill();
+      }
+    })();
+  })();
+
+  /* Lumis's own sky, quoted inside the product panel */
+  (function prodSky(){
+    var canvas = document.getElementById('prodStars');
+    if(!canvas) return;
+    var ctx = canvas.getContext('2d'), P = [], w = 0, h = 0, dpr = Math.min(devicePixelRatio||1,2);
+    function size(){
+      var r = canvas.parentElement.getBoundingClientRect();
+      w = r.width; h = r.height;
+      canvas.width = w*dpr; canvas.height = h*dpr;
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    size(); addEventListener('resize', size);
+    for(var i=0;i<46;i++){
+      P.push({x:Math.random(), y:Math.random(), r:.5+Math.random()*1.2,
+        ph:Math.random()*Math.PI*2, sp:.3+Math.random()*.8});
+    }
+    function draw(t){
+      ctx.clearRect(0,0,w,h);
+      for(var i=0;i<P.length;i++){
+        var p = P[i];
+        var a = .25 + .6*(0.5 + 0.5*Math.sin(t*p.sp + p.ph));
+        ctx.fillStyle = 'rgba(226,218,255,'+a+')';
+        ctx.beginPath(); ctx.arc(p.x*w, p.y*h, p.r*.8, 0, 7); ctx.fill();
+      }
+    }
+    if(reduced){ draw(0); return; }
+    var running = true, t = 0;
+    if('IntersectionObserver' in window){
+      new IntersectionObserver(function(en){ running = en[0].isIntersecting; }).observe(canvas);
+    }
+    (function frame(){
+      requestAnimationFrame(frame);
+      if(!running) return;
+      t += .016; draw(t);
+    })();
+  })();
+})();
+</script>
+
+</body>
+</html>
